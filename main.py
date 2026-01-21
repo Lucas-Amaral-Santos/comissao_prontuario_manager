@@ -161,6 +161,9 @@ with tab2:
       print(mycursor.rowcount, "record inserted.")
 
       st.write("Revisão de Prontuários inseridas com sucesso.")
+
+      st.session_state.msg = "Atualizado!"
+      st.rerun()
       
 
 
