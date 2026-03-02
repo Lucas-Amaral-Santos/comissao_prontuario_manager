@@ -140,8 +140,8 @@ with tab2:
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-
-        val = (int(df['evolucao'].values[0])+evolucao, int(df['at_diaria'].values[0])+at_diaria, int(df['qu_horario'].values[0])+qu_horario, int(df['anex_aval_evol_entrada'].values[0])+anex_aval_evol_entrada, int(df['carimbar_assinar'].values[0])+carimbar_assinar, int(df['preenche_campos'].values[0])+preenche_campos, int(df['rasura'].values[0])+rasura, int(df['evol_alta'].values[0])+evol_alta, int(df['datar'].values[0])+datar, int(df['folha_enc'].values[0])+folha_enc, int(df['dados_errados'].values[0])+dados_errados, int(df['info_cid'].values[0])+info_cid, int(df['ordem_cron'].values[0])+ordem_cron, int(df['abrir_pront'].values[0])+abrir_pront, mes)
+        
+        val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, mes)
         
         mycursor.execute(sql, val)
 
