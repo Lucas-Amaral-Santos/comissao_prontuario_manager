@@ -21,6 +21,7 @@ mycursor = conn.cursor()
 
 df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
 df_revisados = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
+df_prontuarios_corretos = pd.read_sql_query("SELECT * FROM `prontuarios_corretos`", conn).set_index('id')
 
 mes_choices = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
@@ -30,6 +31,18 @@ st.title("Gerenciamento do prontuário")
 
 
 tab1, tab2 = st.tabs(["Progresso", "Inserir Ocorrencia"])
+
+
+
+def listar_ocorrencias(row, occ_cols):
+    lista = []
+    for c in occ_cols:
+        if row[c] > 0:
+            lista.append(f"{c} ({int(row[c])})")
+    return ", ".join(lista)
+
+
+
 
 
 with tab1:
@@ -44,6 +57,12 @@ with tab1:
     # 2) ocorrências dessas revisões
     df_ocor_mes = df[df["revisao_id"].isin(df_rev_mes.index)].copy()
     st.write("Qtd ocorrências mês:", len(df_ocor_mes))
+
+    qtd_pron_rev = len(df_revisados['prontuario'].unique())
+    st.write("Qtd prontuários revisados no mês:", qtd_pron_rev)
+
+    qtd_pront_corretos = len(df_prontuarios_corretos['prontuarios_corretos'].unique())
+    st.write("Qtd prontuários corretos no mês:", qtd_pront_corretos)
 
     # 3) colunas de ocorrência
     occ_cols = [c for c in df_ocor_mes.columns if c != "revisao_id"]
@@ -72,33 +91,91 @@ with tab1:
     # 6) se não houver nenhuma ocorrência >0 no mês, ainda mostramos os prontuários
     colunas_occ_com_uso = [c for c in occ_cols if df_por_prontuario[c].sum() > 0]
 
-    if len(df_por_prontuario) == 0:
-        st.warning("Não achei registros para o mês atual (o join/filters retornaram vazio).")
-        st.dataframe(df_rev_mes[["prontuario","setor","turno","profissional"]], use_container_width=True)
 
-    elif len(colunas_occ_com_uso) == 0:
-        st.info("Nenhuma ocorrência registrada neste mês (tudo zerado). Mostrando apenas os prontuários revisados.")
-        st.dataframe(df_por_prontuario[group_keys], use_container_width=True)
+    df_por_prontuario["total_ocorrencias"] = df_por_prontuario[colunas_occ_com_uso].sum(axis=1)
+    df_por_prontuario = df_por_prontuario.sort_values("total_ocorrencias", ascending=False)
 
-    else:
-        df_por_prontuario["total_ocorrencias"] = df_por_prontuario[colunas_occ_com_uso].sum(axis=1)
-        df_por_prontuario = df_por_prontuario.sort_values("total_ocorrencias", ascending=False)
 
-        st.subheader("Revisões do mês atual — por prontuário")
-        st.dataframe(df_por_prontuario[group_keys + colunas_occ_com_uso + ["total_ocorrencias"]], use_container_width=True)
+    df_por_prontuario["ocorrencias"] = df_por_prontuario.apply(
+    lambda r: listar_ocorrencias(r, occ_cols),
+    axis=1
+    )
+
+    df_final = df_por_prontuario[
+        ["prontuario", "setor", "turno", "profissional", "ocorrencias", "total_ocorrencias"]
+    ]
+
+    st.dataframe(df_final, use_container_width=True)
+
 
     # -------------------------
     # TABELA 2) Somatório total do mês (por tipo + total geral)
     # -------------------------
-    totais_mes = df_ocor_mes[occ_cols].sum().sort_values(ascending=False)
+    # soma por turno
+    # 1) soma por turno
+    df_turno = (
+        df_join
+        .groupby("turno")[occ_cols]
+        .sum()
+    )
 
-    df_totais_mes = totais_mes.reset_index()
-    df_totais_mes.columns = ["ocorrencia", "total_no_mes"]
+    # 2) coloca ocorrências nas linhas
+    df_turno = df_turno.T
+
+    # 3) normaliza nomes de turno e garante colunas fixas
+    for col in ["Manhã", "Tarde"]:
+        if col not in df_turno.columns:
+            df_turno[col] = 0
+
+    # 4) total
+    df_turno["total"] = df_turno["Manhã"] + df_turno["Tarde"]
+
+    # 5) voltar para formato final
+    df_turno = df_turno.reset_index().rename(columns={"index": "ocorrencia"})
+
+    df_turno = df_turno[["ocorrencia", "Manhã", "Tarde", "total"]]
+
+    # opcional: mostrar só o que teve ocorrência
+    df_turno = df_turno[df_turno["total"] > 0].sort_values("total", ascending=False)
+
+    st.subheader("Ocorrências no mês por turno")
+    st.dataframe(df_turno, use_container_width=True)
 
 
-    st.subheader("Somatório de ocorrências no mês atual")
-    st.metric("Total geral de ocorrências no mês", int(totais_mes.sum()))
-    st.dataframe(df_totais_mes, use_container_width=True)
+
+
+      # -------------------------
+    # TABELA 3) Somatório total do mês (por tipo + total geral)
+    # -------------------------
+    # soma por turno
+    # 1) soma por turno
+    # somar ocorrências totais por linha
+    df_join["total_ocorrencias"] = df_join[occ_cols].sum(axis=1)
+
+    # agrupar por setor e turno
+    df_setor = (
+        df_join
+        .groupby(["setor", "turno"])["total_ocorrencias"]
+        .sum()
+        .unstack(fill_value=0)
+    )
+
+
+
+    # garantir colunas
+    for col in ["Manhã","Tarde"]:
+        if col not in df_setor.columns:
+            df_setor[col] = 0
+
+    # total
+    df_setor["total"] = df_setor["Manhã"] + df_setor["Tarde"]
+
+    df_setor = df_setor.reset_index()
+
+    st.subheader("Ocorrências no mês por setor")
+    st.dataframe(df_setor[["setor","Manhã","Tarde","total"]], use_container_width=True)
+
+
 
     buffer = io.BytesIO()
     df_por_prontuario.to_excel(buffer, index=False, engine="openpyxl")
@@ -199,10 +276,9 @@ with tab2:
     mycursor.execute(sql, val)
     conn.commit()
 
-
     print(mycursor.rowcount, "record inserted.")
 
-    st.write("Ocorências inserida com sucesso.")
+    st.write("Ocorrências inserida com sucesso.")
 
     sql = """
         INSERT INTO ocorrencia (
@@ -232,6 +308,23 @@ with tab2:
     conn.commit()
 
     st.write("Revisão de Prontuários inseridas com sucesso.")
+
+    sql = """
+    INSERT INTO prontuarios_corretos(
+        prontuarios_corretos,
+        setor,
+        turno,
+        profissional,
+        mes
+    ) 
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    val = (corretos, setor, turno, profissional, mes)
+        
+    mycursor.execute(sql, val)
+    conn.commit()
+
+    print(mycursor.rowcount, "record inserted.")
 
     st.session_state.msg = "Atualizado!"
     st.rerun()
