@@ -20,9 +20,10 @@ print(conn)
 mycursor = conn.cursor()
 
 df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
-df_setor = pd.read_sql_query("SELECT * FROM `setor`", conn).set_index('id')
-df_turno = pd.read_sql_query("SELECT * FROM `turno`", conn).set_index('id')
 df_revisados = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
+
+mes_choices = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
 
 
 st.title("Gerenciamento do prontuário")
@@ -32,15 +33,75 @@ tab1, tab2 = st.tabs(["Progresso", "Inserir Ocorrencia"])
 
 
 with tab1:
-    st.markdown("## Progresso")
+    
+    mes_atual = pd.Timestamp.today().month
 
-    df
-    df_setor
-    df_turno
-    df_revisados
+    # 1) revisões do mês (sempre existem ou você vê logo)
+    df_rev_mes = df_revisados[df_revisados["mes"] == mes_choices[mes_atual - 1]].copy()
+
+    st.write("Qtd revisões mês:", len(df_rev_mes))
+
+    # 2) ocorrências dessas revisões
+    df_ocor_mes = df[df["revisao_id"].isin(df_rev_mes.index)].copy()
+    st.write("Qtd ocorrências mês:", len(df_ocor_mes))
+
+    # 3) colunas de ocorrência
+    occ_cols = [c for c in df_ocor_mes.columns if c != "revisao_id"]
+
+    # garantir numérico
+    for c in occ_cols:
+        df_ocor_mes[c] = pd.to_numeric(df_ocor_mes[c], errors="coerce").fillna(0).astype(int)
+
+    # 4) JOIN
+    df_join = df_ocor_mes.merge(
+        df_rev_mes,
+        left_on="revisao_id",
+        right_index=True,
+        how="left"
+    )
+
+    # 5) agrega por prontuário (soma ocorrências)
+    group_keys = ["prontuario", "setor", "turno", "profissional"]
+
+    df_por_prontuario = (
+        df_join.groupby(group_keys, dropna=False)[occ_cols]
+            .sum()
+            .reset_index()
+    )
+
+    # 6) se não houver nenhuma ocorrência >0 no mês, ainda mostramos os prontuários
+    colunas_occ_com_uso = [c for c in occ_cols if df_por_prontuario[c].sum() > 0]
+
+    if len(df_por_prontuario) == 0:
+        st.warning("Não achei registros para o mês atual (o join/filters retornaram vazio).")
+        st.dataframe(df_rev_mes[["prontuario","setor","turno","profissional"]], use_container_width=True)
+
+    elif len(colunas_occ_com_uso) == 0:
+        st.info("Nenhuma ocorrência registrada neste mês (tudo zerado). Mostrando apenas os prontuários revisados.")
+        st.dataframe(df_por_prontuario[group_keys], use_container_width=True)
+
+    else:
+        df_por_prontuario["total_ocorrencias"] = df_por_prontuario[colunas_occ_com_uso].sum(axis=1)
+        df_por_prontuario = df_por_prontuario.sort_values("total_ocorrencias", ascending=False)
+
+        st.subheader("Revisões do mês atual — por prontuário")
+        st.dataframe(df_por_prontuario[group_keys + colunas_occ_com_uso + ["total_ocorrencias"]], use_container_width=True)
+
+    # -------------------------
+    # TABELA 2) Somatório total do mês (por tipo + total geral)
+    # -------------------------
+    totais_mes = df_ocor_mes[occ_cols].sum().sort_values(ascending=False)
+
+    df_totais_mes = totais_mes.reset_index()
+    df_totais_mes.columns = ["ocorrencia", "total_no_mes"]
+
+
+    st.subheader("Somatório de ocorrências no mês atual")
+    st.metric("Total geral de ocorrências no mês", int(totais_mes.sum()))
+    st.dataframe(df_totais_mes, use_container_width=True)
 
     buffer = io.BytesIO()
-    df.to_excel(buffer, index=False, engine="openpyxl")
+    df_por_prontuario.to_excel(buffer, index=False, engine="openpyxl")
     buffer.seek(0)
 
     st.download_button(
@@ -54,13 +115,12 @@ with tab1:
 
 
 with tab2:
-  mes_choices = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
   mes = st.selectbox("Mês: ", options=mes_choices, index=datetime.today().month-1)
 
   corretos = st.number_input("Prontuários corretos: ", value=0)
   
-  pendencia = st.number_input("Prontuários com pendência: ", value=0)
+  prontuario = st.number_input("Prontuário: ", value=0)
 
 
   setor_choices = ['Reintegrar', 'Eletro', 'Fisioterapia Geral', 'Fonoaudiologia',
@@ -79,6 +139,11 @@ with tab2:
   turno_choices = ["Manhã", "Tarde"]
 
   turno = st.selectbox("Turno: ", options=turno_choices)
+
+
+  profissional_choices = ["Neliza", "Lucas"]
+
+  profissional = st.selectbox("Profissional: ", options=profissional_choices)
 
 
 
@@ -118,78 +183,53 @@ with tab2:
   print(f"TOTAL OCORRÊNCIAS = {total_ocorrencias}")
   
   if st.button("Cadastrar"):
-
-    if not len(df[df['mes'] == mes]):
-        sql = """
-            INSERT INTO ocorrencia (
-                evolucao,
-                at_diaria,
-                qu_horario,
-                anex_aval_evol_entrada,
-                carimbar_assinar,
-                preenche_campos,
-                rasura,
-                evol_alta,
-                datar,
-                folha_enc,
-                dados_errados,
-                info_cid,
-                ordem_cron,
-                abrir_pront,
-                mes
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
+    
+    sql = """
+    INSERT INTO pront_revisados(
+        prontuario,
+        setor,
+        turno,
+        profissional,
+        mes
+    ) 
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    val = (prontuario, setor, turno, profissional, mes)
         
-        val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, mes)
-        
-        mycursor.execute(sql, val)
-
-        conn.commit()
-
-        print(mycursor.rowcount, "record inserted.")
-
-        st.write("Ocorências inserida com sucesso.")
-    else:
-        sql = "UPDATE ocorrencia SET evolucao = %s, at_diaria = %s, qu_horario = %s, anex_aval_evol_entrada = %s, carimbar_assinar = %s, preenche_campos = %s, rasura = %s, evol_alta = %s, datar = %s, folha_enc = %s, dados_errados = %s, info_cid = %s, ordem_cron = %s, abrir_pront = %s WHERE mes = %s"
-        val = (int(df['evolucao'].values[0])+evolucao, int(df['at_diaria'].values[0])+at_diaria, int(df['qu_horario'].values[0])+qu_horario, int(df['anex_aval_evol_entrada'].values[0])+anex_aval_evol_entrada, int(df['carimbar_assinar'].values[0])+carimbar_assinar, int(df['preenche_campos'].values[0])+preenche_campos, int(df['rasura'].values[0])+rasura, int(df['evol_alta'].values[0])+evol_alta, int(df['datar'].values[0])+datar, int(df['folha_enc'].values[0])+folha_enc, int(df['dados_errados'].values[0])+dados_errados, int(df['info_cid'].values[0])+info_cid, int(df['ordem_cron'].values[0])+ordem_cron, int(df['abrir_pront'].values[0])+abrir_pront, mes)
-        
-        mycursor.execute(sql, val)
-
-        conn.commit()
-
-        print(mycursor.rowcount, "record inserted.")
-
-        st.write("Ocorências atualizada com sucesso.")
-
-    sql = "UPDATE setor SET total = total + %s WHERE setor = %s"
-    val = (total_ocorrencias, setor)
     mycursor.execute(sql, val)
-
     conn.commit()
+
 
     print(mycursor.rowcount, "record inserted.")
 
-    st.write("Setor inseridas com sucesso.")
+    st.write("Ocorências inserida com sucesso.")
 
-
-    sql = "UPDATE turno SET total = total + %s WHERE turno = %s"
-    val = (total_ocorrencias, turno)
+    sql = """
+        INSERT INTO ocorrencia (
+            evolucao,
+            at_diaria,
+            qu_horario,
+            anex_aval_evol_entrada,
+            carimbar_assinar,
+            preenche_campos,
+            rasura,
+            evol_alta,
+            datar,
+            folha_enc,
+            dados_errados,
+            info_cid,
+            ordem_cron,
+            abrir_pront,
+            revisao_id
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, LAST_INSERT_ID())
+        """
+    
+    val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront)
+    
     mycursor.execute(sql, val)
 
     conn.commit()
-
-    print(mycursor.rowcount, "record inserted.")
-
-    st.write("Turno inseridas com sucesso.")
-
-    sql = "UPDATE pront_revisados SET corretos = corretos + %s, com_pendencia = com_pendencia + %s"
-    val = (corretos, pendencia)
-    mycursor.execute(sql, val)
-
-    conn.commit()
-
-    print(mycursor.rowcount, "record inserted.")
 
     st.write("Revisão de Prontuários inseridas com sucesso.")
 
