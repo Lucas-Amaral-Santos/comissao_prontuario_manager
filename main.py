@@ -59,11 +59,9 @@ with tab1:
 
     # 1) revisões do mês (sempre existem ou você vê logo)
     if checkbox_mes:
-        df_rev_mes = df_revisados[df_revisados["mes"] == mes_choices[mes_atual - 1]].copy()
-    else:
-        df_rev_mes = df_revisados.copy()
-    
-    
+        df["data"] = pd.to_datetime(df["data"], errors="coerce")
+        df = df[df["data"].dt.month == mes_atual].copy()
+        
     col5, col6, col7 = st.columns([3,3,3])
 
     with col5:
@@ -93,6 +91,7 @@ with tab1:
             (df["data"] <= data_final)
         ].copy()
     
+    df_rev_mes = df_revisados.copy()
     
     # 2) ocorrências dessas revisões
     df_ocor_mes = df[df["revisao_id"].isin(df_rev_mes.index)].copy()
@@ -245,9 +244,7 @@ with tab1:
 
 with tab2:
 
-    mes_choices_input = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-
-    mes = st.selectbox("Mês: ", options=mes_choices_input, index=datetime.today().month-1, key="mes_input")
+    data = st.date_input("Data: ", value=datetime.today(), format="DD/MM/YYYY", key="data_input")
 
     revisar_input = st.checkbox("Revisar prontuário?", key="revisar_input")
 
@@ -310,8 +307,6 @@ with tab2:
 
         rasura = st.number_input("Rasura: ", value=0)
 
-        data = st.date_input("Data: ", value=datetime.today(), format="DD/MM/YYYY", key="data_input")
-
         
         total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
 
@@ -326,11 +321,11 @@ with tab2:
                 setor,
                 turno,
                 profissional,
-                mes
+                
             ) 
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s)
             """
-            val = (prontuario, setor, turno, profissional, mes)
+            val = (prontuario, setor, turno, profissional)
                 
             mycursor.execute(sql, val)
             
@@ -376,11 +371,11 @@ with tab2:
             sql = """
             INSERT INTO prontuarios_corretos(
                 prontuarios_corretos,
-                mes
+                data
             ) 
             VALUES (%s, %s)
             """
-            val = (corretos, mes)
+            val = (corretos, data)
                 
             mycursor.execute(sql, val)
             conn.commit()
@@ -474,13 +469,13 @@ with tab3:
         else:
             st.warning("Nenhum registro selecionado.")
 
-    
-    df_pront_corr = df_prontuarios_corretos[df_prontuarios_corretos["mes"] == mes_choices[mes_atual_hist]].copy()
+    df_prontuarios_corretos["data"] = pd.to_datetime(df_prontuarios_corretos["data"], errors="coerce")
+    df_pront_corr = df_prontuarios_corretos[df_prontuarios_corretos["data"].dt.month == mes_atual_hist+1].copy()
 
     # coluna de seleção
     df_pront_corr["Selecionar"] = False
 
-    df_pront_corr = df_pront_corr[["Selecionar", "prontuarios_corretos", "atualizado_em", "mes"]]
+    df_pront_corr = df_pront_corr[["Selecionar", "prontuarios_corretos", "atualizado_em", "data"]]
     # editor com checkbox
     edited_df_pront_corr = st.data_editor(
         df_pront_corr,
