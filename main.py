@@ -18,7 +18,7 @@ print(conn)
 
 mycursor = conn.cursor()
 
-df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
+df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id').drop(columns=["atualizado_em"])
 df_revisados = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
 df_prontuarios_corretos = pd.read_sql_query("SELECT * FROM `prontuarios_corretos`", conn).set_index('id')
 
@@ -37,22 +37,63 @@ def listar_ocorrencias(row, occ_cols):
 
 with tab1:
     
-    mes_filter = st.selectbox("Mês: ", options=mes_choices, index=datetime.today().month-1, key="mes_filter")
-    mes_atual = mes_choices.index(mes_filter) + 1
-
     col1, col2 = st.columns([1,1])
 
     with col1:  
-        data_filter = st.date_input("Data: ", value=datetime.today(), key="data_filter")
+        mes_filter = st.selectbox("Mês: ", options=mes_choices, index=datetime.today().month-1, key="mes_filter")
+        mes_atual = mes_choices.index(mes_filter) + 1
     with col2:
+        checkbox_mes = st.checkbox("Filtrar por mes?", key="checkbox_mes")
+    
+
+    col3, col4 = st.columns([1,1])
+
+    with col3:  
+        data_filter = st.date_input("Data: ", value=datetime.today(), key="data_filter", format="DD/MM/YYYY")
+    with col4:
         checkbox_data = st.checkbox("Filtrar por data?", key="checkbox_data")
     
+
     if checkbox_data:
         df = df[df["data"] == pd.to_datetime(data_filter).date()].copy()
 
     # 1) revisões do mês (sempre existem ou você vê logo)
-    df_rev_mes = df_revisados[df_revisados["mes"] == mes_choices[mes_atual - 1]].copy()
+    if checkbox_mes:
+        df_rev_mes = df_revisados[df_revisados["mes"] == mes_choices[mes_atual - 1]].copy()
+    else:
+        df_rev_mes = df_revisados.copy()
+    
+    
+    col5, col6, col7 = st.columns([3,3,3])
 
+    with col5:
+        data_inicial = st.date_input(
+            "Data inicial:",
+            value=datetime.today().date(),
+            key="data_inicial",
+            format="DD/MM/YYYY"
+        )
+
+    with col6:
+        data_final = st.date_input(
+            "Data final:",
+            value=datetime.today().date(),
+            key="data_final",
+            format="DD/MM/YYYY"
+        )
+
+    with col7:
+        checkbox_intervalo = st.checkbox("Filtrar por período?", key="checkbox_intervalo")
+    
+    if checkbox_intervalo:
+        df["data"] = pd.to_datetime(df["data"]).dt.date
+
+        df = df[
+            (df["data"] >= data_inicial) &
+            (df["data"] <= data_final)
+        ].copy()
+    
+    
     # 2) ocorrências dessas revisões
     df_ocor_mes = df[df["revisao_id"].isin(df_rev_mes.index)].copy()
     st.write("Qtd ocorrências:", len(df_ocor_mes))
@@ -60,7 +101,7 @@ with tab1:
     qtd_pron_rev = len(df_revisados['prontuario'].unique())
     st.write("Qtd prontuários com pendência:", qtd_pron_rev)
 
-    qtd_pront_corretos = len(df_prontuarios_corretos['prontuarios_corretos'].unique())
+    qtd_pront_corretos = df_prontuarios_corretos['prontuarios_corretos'].sum()
     st.write("Qtd prontuários corretos:", qtd_pront_corretos)
     
     st.write("Qtd prontuários analisados:", qtd_pron_rev + qtd_pront_corretos)
@@ -146,9 +187,6 @@ with tab1:
     st.subheader("Ocorrências no mês por turno")
     st.dataframe(df_turno, use_container_width=True)
 
-
-
-
     # -------------------------
     # TABELA 3) Somatório total do mês (por tipo + total geral)
     # -------------------------
@@ -205,7 +243,6 @@ with tab1:
     )
 
 
-
 with tab2:
 
     mes_choices_input = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -236,9 +273,10 @@ with tab2:
         turno = st.selectbox("Turno: ", options=turno_choices)
 
 
-        profissional_choices = ["Neliza", "Lucas"]
-
-        profissional = st.selectbox("Profissional: ", options=profissional_choices)
+        # profissional_choices = ["Neliza", "Lucas"]
+        # profissional = st.selectbox("Profissional: ", options=profissional_choices)
+        
+        profissional = st.text_input("Profissional: ", value="")
 
 
 
@@ -272,7 +310,7 @@ with tab2:
 
         rasura = st.number_input("Rasura: ", value=0)
 
-        data = st.date_input("Data: ", value=datetime.today())
+        data = st.date_input("Data: ", value=datetime.today(), format="DD/MM/YYYY", key="data_input")
 
         
         total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
@@ -358,6 +396,10 @@ with tab2:
 
 with tab3:
     
+    df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
+
+    
+    
     df_join = df.merge(
         df_revisados,
         left_on="revisao_id",
@@ -376,26 +418,91 @@ with tab3:
     df_rev_mes["Selecionar"] = False
 
     # editor com checkbox
+    
+    df_rev_mes = df_rev_mes[["Selecionar", "data", "prontuario", "setor", "turno", "profissional", "atualizado_em", "evolucao", "at_diaria", "qu_horario", "anex_aval_evol_entrada", "carimbar_assinar", "preenche_campos", "rasura", "evol_alta", "datar", "folha_enc", "dados_errados", "info_cid", "ordem_cron", "abrir_pront", "revisao_id"]]
+    
     edited_df = st.data_editor(
         df_rev_mes,
         use_container_width=True,
         num_rows="fixed"
     )
 
-    # botão para apagar
-    if st.button("🗑️ Apagar registros selecionados"):
+    if st.button("🗑️ Apagar registros de prontuários revisados selecionados"):
         selecionados = edited_df[edited_df["Selecionar"]]
+
+        if not selecionados.empty:
+            ids_ocorrencia = selecionados.index.tolist()
+
+            # pega os revisao_id ligados às ocorrências selecionadas
+            revisoes_afetadas = selecionados["revisao_id"].dropna().unique().tolist()
+
+            # 1) apaga as ocorrências selecionadas
+            for id_oc in ids_ocorrencia:
+                mycursor.execute(
+                    "DELETE FROM ocorrencia WHERE id = %s",
+                    (id_oc,)
+                )
+
+            # 2) para cada revisão afetada, verifica se ainda sobrou alguma ocorrência
+            pronts_apagados = 0
+
+            for revisao_id in revisoes_afetadas:
+                mycursor.execute(
+                    "SELECT COUNT(*) FROM ocorrencia WHERE revisao_id = %s",
+                    (revisao_id,)
+                )
+                qtd_restante = mycursor.fetchone()[0]
+
+                # se não restou nenhuma ocorrência, apaga o registro em pront_revisados
+                if qtd_restante == 0:
+                    mycursor.execute(
+                        "DELETE FROM pront_revisados WHERE id = %s",
+                        (revisao_id,)
+                    )
+                    pronts_apagados += 1
+
+            conn.commit()
+
+            st.success(
+                f"{len(ids_ocorrencia)} ocorrência(s) apagada(s) e "
+                f"{pronts_apagados} registro(s) de pront_revisados removido(s)."
+            )
+            
+            time.sleep(2)
+            st.rerun()
+
+        else:
+            st.warning("Nenhum registro selecionado.")
+
+    
+    df_pront_corr = df_prontuarios_corretos[df_prontuarios_corretos["mes"] == mes_choices[mes_atual_hist]].copy()
+
+    # coluna de seleção
+    df_pront_corr["Selecionar"] = False
+
+    df_pront_corr = df_pront_corr[["Selecionar", "prontuarios_corretos", "atualizado_em", "mes"]]
+    # editor com checkbox
+    edited_df_pront_corr = st.data_editor(
+        df_pront_corr,
+        use_container_width=True,
+        num_rows="fixed"
+    )
+
+    # botão para apagar
+    if st.button("🗑️ Apagar registros de prontuarios corretos selecionados"):
+        selecionados = edited_df_pront_corr[edited_df_pront_corr["Selecionar"]]
 
         if not selecionados.empty:
 
             ids = selecionados.index.tolist()
 
             for id_reg in ids:
-                mycursor.execute("DELETE FROM ocorrencia WHERE id = %s", (id_reg,))
+                mycursor.execute("DELETE FROM prontuarios_corretos WHERE id = %s", (id_reg,))
 
             conn.commit()
 
             st.success(f"{len(ids)} registros apagados.")
+            time.sleep(2)
             st.rerun()
 
         else:
