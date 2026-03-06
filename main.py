@@ -105,6 +105,9 @@ with tab1:
     df_final = df_por_prontuario[
         ["prontuario", "setor", "turno", "profissional", "ocorrencias", "total_ocorrencias"]
     ]
+    
+    df_final = df_final[df_final["total_ocorrencias"] > 0]
+
 
     st.dataframe(df_final, use_container_width=True)
 
