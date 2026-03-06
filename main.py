@@ -3,6 +3,8 @@ import pandas as pd
 import mysql.connector
 from datetime import datetime
 import io
+import time
+
 
 conn = mysql.connector.connect(
   host="mysql20-farm1.kinghost.net",
@@ -36,7 +38,6 @@ def listar_ocorrencias(row, occ_cols):
 with tab1:
     
     mes_filter = st.selectbox("Mês: ", options=mes_choices, index=datetime.today().month-1, key="mes_filter")
-    print(f"mes_filter = {mes_filter}")
     mes_atual = mes_choices.index(mes_filter) + 1
 
     col1, col2 = st.columns([1,1])
@@ -211,140 +212,149 @@ with tab2:
 
     mes = st.selectbox("Mês: ", options=mes_choices_input, index=datetime.today().month-1, key="mes_input")
 
-    corretos = st.number_input("Prontuários corretos: ", value=0)
-    
-    prontuario = st.number_input("Prontuário: ", value=0)
+    revisar_input = st.checkbox("Revisar prontuário?", key="revisar_input")
+
+    if not revisar_input:
+        corretos = st.number_input("Prontuários corretos: ", value=0)
+    else:
+        prontuario = st.number_input("Prontuário: ", value=0)
 
 
-    setor_choices = [
-        'Departamento Médico',    'Eletro',    'Fisioterapia Dermatofuncional',    'Fisioterapia Geral',    'Fisioterapia Motora',
-        'Fisioterapia NI',    'Fisioterapia Pélvica',    'Fisioterapia Vestibular',    'Fonoaudiologia',    'Fonoaudiologia NI',
-        'Fonoaudiologia TI',    'Massagem',    'Neuropsicopedagogia',    'Oficina Ortopédica',    'Pilates',    'Psicologia',
-        'Psicologia NI',    'Psicologia TI',    'Psicomotricidade',    'Reintegrar',    'Respiratória',    'RPG',    'Serviço Social',
-        'Terapia Ocupacional',    'Terapia Ocupacional TI'
-        ]
+        setor_choices = [
+            'Departamento Médico',    'Eletro',    'Fisioterapia Dermatofuncional',    'Fisioterapia Geral',    'Fisioterapia Motora',
+            'Fisioterapia NI',    'Fisioterapia Pélvica',    'Fisioterapia Vestibular',    'Fonoaudiologia',    'Fonoaudiologia NI',
+            'Fonoaudiologia TI',    'Massagem',    'Neuropsicopedagogia',    'Oficina Ortopédica',    'Pilates',    'Psicologia',
+            'Psicologia NI',    'Psicologia TI',    'Psicomotricidade',    'Reintegrar',    'Respiratória',    'RPG',    'Serviço Social',
+            'Terapia Ocupacional',    'Terapia Ocupacional TI'
+            ]
 
 
-    setor = st.selectbox("Setor: ", options=setor_choices)
+        setor = st.selectbox("Setor: ", options=setor_choices)
 
-    turno_choices = ["Manhã", "Tarde"]
+        turno_choices = ["Manhã", "Tarde"]
 
-    turno = st.selectbox("Turno: ", options=turno_choices)
-
-
-    profissional_choices = ["Neliza", "Lucas"]
-
-    profissional = st.selectbox("Profissional: ", options=profissional_choices)
+        turno = st.selectbox("Turno: ", options=turno_choices)
 
 
+        profissional_choices = ["Neliza", "Lucas"]
 
-    #===================== TABELAS OCORRENCIAS ===========================
+        profissional = st.selectbox("Profissional: ", options=profissional_choices)
 
-    anex_aval_evol_entrada = st.number_input("Anexar Avaliação ou Evolução de Entrada: ", value=0)
 
-    abrir_pront = st.number_input("Abrir prontuário: ", value=0)
 
-    at_diaria = st.number_input("Atividade Diária: ", value=0)
+        #===================== TABELAS OCORRENCIAS ===========================
 
-    carimbar_assinar = st.number_input("Carimbar e assinar: ", value=0)
+        anex_aval_evol_entrada = st.number_input("Anexar Avaliação ou Evolução de Entrada: ", value=0)
 
-    dados_errados = st.number_input("Dados errados: ", value=0)
+        abrir_pront = st.number_input("Abrir prontuário: ", value=0)
 
-    datar = st.number_input("Datar: ", value=0)
+        at_diaria = st.number_input("Atividade Diária: ", value=0)
 
-    evolucao = st.number_input("Evolução: ", value=0)
+        carimbar_assinar = st.number_input("Carimbar e assinar: ", value=0)
 
-    evol_alta = st.number_input("Evolução de alta: ", value=0)
+        dados_errados = st.number_input("Dados errados: ", value=0)
 
-    folha_enc = st.number_input("Folha de encaminhamento: ", value=0)
+        datar = st.number_input("Datar: ", value=0)
 
-    info_cid = st.number_input("Informação de CID: ", value=0)
+        evolucao = st.number_input("Evolução: ", value=0)
 
-    ordem_cron = st.number_input("Ordem cronológica: ", value=0)
+        evol_alta = st.number_input("Evolução de alta: ", value=0)
 
-    preenche_campos = st.number_input("Prenchimento de todos os campos: ", value=0)
+        folha_enc = st.number_input("Folha de encaminhamento: ", value=0)
 
-    qu_horario = st.number_input("Quadro de Horário: ", value=0)
+        info_cid = st.number_input("Informação de CID: ", value=0)
 
-    rasura = st.number_input("Rasura: ", value=0)
+        ordem_cron = st.number_input("Ordem cronológica: ", value=0)
 
-    data = st.date_input("Data: ", value=datetime.today())
+        preenche_campos = st.number_input("Prenchimento de todos os campos: ", value=0)
 
-    
-    total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
+        qu_horario = st.number_input("Quadro de Horário: ", value=0)
 
-    print(f"TOTAL OCORRÊNCIAS = {total_ocorrencias}")
+        rasura = st.number_input("Rasura: ", value=0)
+
+        data = st.date_input("Data: ", value=datetime.today())
+
+        
+        total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
+
+        print(f"TOTAL OCORRÊNCIAS = {total_ocorrencias}")
     
     if st.button("Cadastrar"):
         
-        sql = """
-        INSERT INTO pront_revisados(
-            prontuario,
-            setor,
-            turno,
-            profissional,
-            mes
-        ) 
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        val = (prontuario, setor, turno, profissional, mes)
-            
-        mycursor.execute(sql, val)
-        conn.commit()
-
-        print(mycursor.rowcount, "record inserted.")
-
-        st.write("Ocorrências inserida com sucesso.")
-
-        sql = """
-            INSERT INTO ocorrencia (
-                evolucao,
-                at_diaria,
-                qu_horario,
-                anex_aval_evol_entrada,
-                carimbar_assinar,
-                preenche_campos,
-                rasura,
-                evol_alta,
-                datar,
-                folha_enc,
-                dados_errados,
-                info_cid,
-                ordem_cron,
-                abrir_pront,
-                data,
-                revisao_id
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, LAST_INSERT_ID())
+        if revisar_input:
+            sql = """
+            INSERT INTO pront_revisados(
+                prontuario,
+                setor,
+                turno,
+                profissional,
+                mes
+            ) 
+            VALUES (%s, %s, %s, %s, %s)
             """
-        
-        val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, data)
-        
-        mycursor.execute(sql, val)
-
-        conn.commit()
-
-        st.write("Revisão de Prontuários inseridas com sucesso.")
-
-        sql = """
-        INSERT INTO prontuarios_corretos(
-            prontuarios_corretos,
-            setor,
-            turno,
-            profissional,
-            mes
-        ) 
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        val = (corretos, setor, turno, profissional, mes)
+            val = (prontuario, setor, turno, profissional, mes)
+                
+            mycursor.execute(sql, val)
             
-        mycursor.execute(sql, val)
-        conn.commit()
+            conn.commit()
 
-        print(mycursor.rowcount, "record inserted.")
+            st.success("Ocorrências inserida com sucesso.")
 
-        st.session_state.msg = "Atualizado!"
-        st.rerun()
+            sql = """
+                INSERT INTO ocorrencia (
+                    evolucao,
+                    at_diaria,
+                    qu_horario,
+                    anex_aval_evol_entrada,
+                    carimbar_assinar,
+                    preenche_campos,
+                    rasura,
+                    evol_alta,
+                    datar,
+                    folha_enc,
+                    dados_errados,
+                    info_cid,
+                    ordem_cron,
+                    abrir_pront,
+                    data,
+                    revisao_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, LAST_INSERT_ID())
+                """
+            
+            val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, data)
+            
+            mycursor.execute(sql, val)
+
+            conn.commit()
+
+            st.success("Revisão de Prontuários inseridas com sucesso.")
+            time.sleep(2)
+            
+            st.session_state.msg = "Atualizado prontuarios revisados com sucesso."
+            st.rerun()
+
+        else:
+            sql = """
+            INSERT INTO prontuarios_corretos(
+                prontuarios_corretos,
+                mes
+            ) 
+            VALUES (%s, %s)
+            """
+            val = (corretos, mes)
+                
+            mycursor.execute(sql, val)
+            conn.commit()
+            
+            
+            st.success("Prontuários corretos inserida com sucesso.")
+
+            time.sleep(2)
+            
+            st.session_state.msg = "Atualizado prontuarios corretos com sucesso."
+            st.rerun()
+            
 
 with tab3:
     
