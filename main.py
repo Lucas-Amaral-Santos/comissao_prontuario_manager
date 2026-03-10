@@ -168,6 +168,17 @@ with tab1:
 
     st.dataframe(df_final, use_container_width=True)
 
+    buffer = io.BytesIO()
+    df_final.to_excel(buffer, index=False, engine="openpyxl")
+    buffer.seek(0)
+
+    st.download_button(
+        label="Download",
+        data=buffer,
+        file_name=f"ocorrencias{datetime.today().month}-{datetime.today().year}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="download-xlsx"
+    )
 
     # -------------------------
     # TABELA 2) Somatório total do mês (por tipo + total geral)
@@ -242,20 +253,6 @@ with tab1:
     )
 
     st.dataframe(df_turno, use_container_width=True)
-
-
-
-    buffer = io.BytesIO()
-    df_por_prontuario.to_excel(buffer, index=False, engine="openpyxl")
-    buffer.seek(0)
-
-    st.download_button(
-        label="Download",
-        data=buffer,
-        file_name=f"ocorrencias{datetime.today().month}-{datetime.today().year}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        key="download-xlsx"
-    )
 
 
 with tab2:
