@@ -22,6 +22,10 @@ df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id').drop(
 df_revisados = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
 df_prontuarios_corretos = pd.read_sql_query("SELECT * FROM `prontuarios_corretos`", conn).set_index('id')
 
+df["data"] = pd.to_datetime(df["data"], errors="coerce")
+df_prontuarios_corretos["data"] = pd.to_datetime(df_prontuarios_corretos["data"], errors="coerce")
+
+
 mes_choices = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 st.title("Gerenciamento do prontuário")
@@ -45,6 +49,10 @@ with tab1:
     with col2:
         checkbox_mes = st.checkbox("Filtrar por mes?", key="checkbox_mes")
     
+    if checkbox_mes:
+        df = df[df["data"].dt.month == mes_atual].copy()
+        df_prontuarios_corretos = df_prontuarios_corretos[df_prontuarios_corretos["data"].dt.month == mes_atual].copy()
+        
 
     col3, col4 = st.columns([1,1])
 
@@ -55,13 +63,11 @@ with tab1:
     
 
     if checkbox_data:
-        df = df[df["data"] == pd.to_datetime(data_filter).date()].copy()
+        df = df[df["data"] == pd.to_datetime(data_filter)].copy()
+        df_prontuarios_corretos = df_prontuarios_corretos[df_prontuarios_corretos["data"] == pd.to_datetime(data_filter)].copy()
 
     # 1) revisões do mês (sempre existem ou você vê logo)
-    if checkbox_mes:
-        df["data"] = pd.to_datetime(df["data"], errors="coerce")
-        df = df[df["data"].dt.month == mes_atual].copy()
-        
+    
     col5, col6, col7 = st.columns([3,3,3])
 
     with col5:
@@ -84,30 +90,40 @@ with tab1:
         checkbox_intervalo = st.checkbox("Filtrar por período?", key="checkbox_intervalo")
     
     if checkbox_intervalo:
-        df["data"] = pd.to_datetime(df["data"]).dt.date
-
         df = df[
-            (df["data"] >= data_inicial) &
-            (df["data"] <= data_final)
+            (df["data"] >= pd.to_datetime(data_inicial)) &
+            (df["data"] <= pd.to_datetime(data_final))
         ].copy()
-    
+        
+        df_prontuarios_corretos = df_prontuarios_corretos[
+            (df_prontuarios_corretos["data"] >= pd.to_datetime(data_inicial)) &
+            (df_prontuarios_corretos["data"] <= pd.to_datetime(data_final))
+        ].copy()
+
     df_rev_mes = df_revisados.copy()
+    df_pront_corretos = df_prontuarios_corretos.copy()
+    
+    
+
     
     # 2) ocorrências dessas revisões
     df_ocor_mes = df[df["revisao_id"].isin(df_rev_mes.index)].copy()
-    st.write("Qtd ocorrências:", len(df_ocor_mes))
+    occ_cols = [c for c in df_ocor_mes.columns if c not in ["revisao_id", "data"]]
+    # df_ocor_mes["data"] = pd.to_datetime(df_ocor_mes["data"], errors="coerce")
+    # df_ocor_mes = df_ocor_mes[df_ocor_mes['data'].dt.month == mes_atual].copy()
+    total_ocorrencias = df_ocor_mes[occ_cols].sum().sum()
+    st.write("Qtd ocorrências:", total_ocorrencias)
 
-    qtd_pron_rev = len(df_revisados['prontuario'].unique())
+    
+    qtd_pron_rev = len(df_ocor_mes.join(df_rev_mes, on="revisao_id")['prontuario'].unique())
     st.write("Qtd prontuários com pendência:", qtd_pron_rev)
 
-    qtd_pront_corretos = df_prontuarios_corretos['prontuarios_corretos'].sum()
+    qtd_pront_corretos = df_pront_corretos['prontuarios_corretos'].sum()
     st.write("Qtd prontuários corretos:", qtd_pront_corretos)
     
     st.write("Qtd prontuários analisados:", qtd_pron_rev + qtd_pront_corretos)
 
 
-    # 3) colunas de ocorrência
-    occ_cols = [c for c in df_ocor_mes.columns if c != "revisao_id"]
 
     # garantir numérico
     for c in occ_cols:
@@ -320,8 +336,7 @@ with tab2:
                 prontuario,
                 setor,
                 turno,
-                profissional,
-                
+                profissional
             ) 
             VALUES (%s, %s, %s, %s)
             """
@@ -392,11 +407,12 @@ with tab2:
 with tab3:
     
     df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
+    df_rev = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
 
     
     
     df_join = df.merge(
-        df_revisados,
+        df_rev,
         left_on="revisao_id",
         right_index=True,
         how="left"
@@ -407,7 +423,8 @@ with tab3:
     print(f"mes_filter_hist = {mes_filter_hist}")
 
     # dataframe filtrado
-    df_rev_mes = df_join[df_join["mes"] == mes_choices[mes_atual_hist]].copy()
+    df_join["data"] = pd.to_datetime(df_join["data"], errors="coerce")
+    df_rev_mes = df_join[df_join["data"].dt.month == mes_atual_hist+1].copy()
 
     # coluna de seleção
     df_rev_mes["Selecionar"] = False
