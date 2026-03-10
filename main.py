@@ -245,6 +245,7 @@ with tab1:
     st.dataframe(df_setor[["setor","Manhã","Tarde","total"]], use_container_width=True)
     
     
+    st.subheader("Total de ocorrências no mês por turno")
     df_turno = (
         df_join
         .groupby("turno")["total_ocorrencias"]
@@ -262,9 +263,9 @@ with tab2:
     revisar_input = st.checkbox("Revisar prontuário?", key="revisar_input")
 
     if not revisar_input:
-        corretos = st.number_input("Prontuários corretos: ", value=0)
+        corretos = st.number_input("Prontuários corretos: ", value=0, key="corretos_input")
     else:
-        prontuario = st.number_input("Prontuário: ", value=0)
+        prontuario = st.number_input("Prontuário: ", value=0, key="prontuario_input")
 
 
         setor_choices = [
@@ -276,49 +277,49 @@ with tab2:
             ]
 
 
-        setor = st.selectbox("Setor: ", options=setor_choices)
+        setor = st.selectbox("Setor: ", options=setor_choices, key="setor_input")
 
         turno_choices = ["Manhã", "Tarde"]
 
-        turno = st.selectbox("Turno: ", options=turno_choices)
+        turno = st.selectbox("Turno: ", options=turno_choices, key="turno_input")
 
 
         # profissional_choices = ["Neliza", "Lucas"]
         # profissional = st.selectbox("Profissional: ", options=profissional_choices)
         
-        profissional = st.text_input("Profissional: ", value="")
+        profissional = st.text_input("Profissional: ", value="", key="profissional_input")
 
 
 
         #===================== TABELAS OCORRENCIAS ===========================
 
-        anex_aval_evol_entrada = st.number_input("Anexar Avaliação ou Evolução de Entrada: ", value=0)
+        anex_aval_evol_entrada = st.number_input("Anexar Avaliação ou Evolução de Entrada: ", value=0, key="anex_aval_evol_entrada_input")
 
-        abrir_pront = st.number_input("Abrir prontuário: ", value=0)
+        abrir_pront = st.number_input("Abrir prontuário: ", value=0, key="abrir_pront_input")
 
-        at_diaria = st.number_input("Atividade Diária: ", value=0)
+        at_diaria = st.number_input("Atividade Diária: ", value=0, key="at_diaria_input")
 
-        carimbar_assinar = st.number_input("Carimbar e assinar: ", value=0)
+        carimbar_assinar = st.number_input("Carimbar e assinar: ", value=0, key="carimbar_assinar_input")
 
-        dados_errados = st.number_input("Dados errados: ", value=0)
+        dados_errados = st.number_input("Dados errados: ", value=0, key="dados_errados_input")
 
-        datar = st.number_input("Datar: ", value=0)
+        datar = st.number_input("Datar: ", value=0, key="datar_input")
 
-        evolucao = st.number_input("Evolução: ", value=0)
+        evolucao = st.number_input("Evolução: ", value=0, key="evolucao_input")
 
-        evol_alta = st.number_input("Evolução de alta: ", value=0)
+        evol_alta = st.number_input("Evolução de alta: ", value=0, key="evol_alta_input")
 
-        folha_enc = st.number_input("Folha de encaminhamento: ", value=0)
+        folha_enc = st.number_input("Folha de encaminhamento: ", value=0, key="folha_enc_input")
 
-        info_cid = st.number_input("Informação de CID: ", value=0)
+        info_cid = st.number_input("Informação de CID: ", value=0, key="info_cid_input")
 
-        ordem_cron = st.number_input("Ordem cronológica: ", value=0)
+        ordem_cron = st.number_input("Ordem cronológica: ", value=0, key="ordem_cron_input")
 
-        preenche_campos = st.number_input("Prenchimento de todos os campos: ", value=0)
+        preenche_campos = st.number_input("Prenchimento de todos os campos: ", value=0, key="preenche_campos_input")
 
-        qu_horario = st.number_input("Quadro de Horário: ", value=0)
+        qu_horario = st.number_input("Quadro de Horário: ", value=0, key="qu_horario_input")
 
-        rasura = st.number_input("Rasura: ", value=0)
+        rasura = st.number_input("Rasura: ", value=0, key="rasura_input")
 
         
         total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
@@ -377,6 +378,9 @@ with tab2:
             time.sleep(2)
             
             st.session_state.msg = "Atualizado prontuarios revisados com sucesso."
+            for key in st.session_state.keys():
+                del st.session_state[key]
+            st.session_state["revisar_input"] = False
             st.rerun()
 
         else:
@@ -398,8 +402,12 @@ with tab2:
             time.sleep(2)
             
             st.session_state.msg = "Atualizado prontuarios corretos com sucesso."
-            st.rerun()
-            
+            for key in st.session_state.keys():
+                print(f"deletando {key} = {st.session_state[key]}")
+                del st.session_state[key]
+            st.session_state["corretos_input"] = 0
+
+            st.rerun()  
 
 with tab3:
     
