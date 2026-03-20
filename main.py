@@ -5,7 +5,7 @@ from datetime import datetime
 import io
 import time
 
-
+# Definindo Banco de Dados
 conn = mysql.connector.connect(
   host="mysql20-farm1.kinghost.net",
   user="afr0202_add1",
@@ -14,14 +14,16 @@ conn = mysql.connector.connect(
   port=3306
 )
 
-print(conn)
-
 mycursor = conn.cursor()
 
+# Lendo a tabela de OCORRÊNCIAS e colocando no dataframe 
 df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id').drop(columns=["atualizado_em"])
+# Lendo a tabela de PRONT_REVISADOS e colocando no dataframe 
 df_revisados = pd.read_sql_query("SELECT * FROM `pront_revisados`", conn).set_index('id')
+# Lendo a tabela de PRONT_REVISADOS e colocando no dataframe 
 df_prontuarios_corretos = pd.read_sql_query("SELECT * FROM `prontuarios_corretos`", conn).set_index('id')
 
+# Convertendo o tipo da coluna data para datetime
 df["data"] = pd.to_datetime(df["data"], errors="coerce")
 df_prontuarios_corretos["data"] = pd.to_datetime(df_prontuarios_corretos["data"], errors="coerce")
 
@@ -39,6 +41,7 @@ def listar_ocorrencias(row, occ_cols):
             lista.append(f"{c} ({int(row[c])})")
     return ", ".join(lista)
 
+# ABA PROGRESSO
 with tab1:
     
     col1, col2 = st.columns([1,1])
@@ -100,6 +103,8 @@ with tab1:
             (df_prontuarios_corretos["data"] <= pd.to_datetime(data_final))
         ].copy()
 
+    # The code `df_rev_mes` is not doing anything in the provided snippet. It appears to be a variable
+    # name or placeholder that is not being used or assigned any value.
     df_rev_mes = df_revisados.copy()
     df_pront_corretos = df_prontuarios_corretos.copy()
     
@@ -255,7 +260,7 @@ with tab1:
 
     st.dataframe(df_turno, use_container_width=True)
 
-
+# ABA INSERIR OCORRÊNICIA
 with tab2:
 
     data = st.date_input("Data: ", value=datetime.today(), format="DD/MM/YYYY", key="data_input")
@@ -409,6 +414,7 @@ with tab2:
 
             st.rerun()  
 
+# ABA HISTÓRIOS DE OCORRÊNCIAS
 with tab3:
     
     df = pd.read_sql_query("SELECT * FROM `ocorrencia`", conn).set_index('id')
