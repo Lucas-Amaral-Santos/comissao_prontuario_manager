@@ -274,11 +274,11 @@ with tab2:
 
 
         setor_choices = [
-            'Departamento Médico',    'Eletro',    'Fisioterapia Dermatofuncional',    'Fisioterapia Geral',    'Fisioterapia Motora',
+            'Arquivo','Departamento Médico',    'Eletro',    'Fisioterapia Dermatofuncional',    'Fisioterapia Geral',    'Fisioterapia Motora',
             'Fisioterapia NI',    'Fisioterapia Pélvica',    'Fisioterapia Vestibular',    'Fonoaudiologia',    'Fonoaudiologia NI',
             'Fonoaudiologia TI',    'Massagem',    'Neuropsicopedagogia',    'Oficina Ortopédica',    'Pilates',    'Psicologia',
             'Psicologia NI',    'Psicologia TI',    'Psicomotricidade',    'Reintegrar',    'Respiratória',    'RPG',    'Serviço Social',
-            'Terapia Ocupacional',    'Terapia Ocupacional TI', 'Arquivo'
+            'Terapia Ocupacional',    'Terapia Ocupacional TI'
             ]
 
 
