@@ -278,7 +278,7 @@ with tab2:
             'Fisioterapia NI',    'Fisioterapia Pélvica',    'Fisioterapia Vestibular',    'Fonoaudiologia',    'Fonoaudiologia NI',
             'Fonoaudiologia TI',    'Massagem',    'Neuropsicopedagogia',    'Oficina Ortopédica',    'Pilates',    'Psicologia',
             'Psicologia NI',    'Psicologia TI',    'Psicomotricidade',    'Reintegrar',    'Respiratória',    'RPG',    'Serviço Social',
-            'Terapia Ocupacional',    'Terapia Ocupacional TI'
+            'Terapia Ocupacional',    'Terapia Ocupacional TI', 'Arquivo'
             ]
 
 
