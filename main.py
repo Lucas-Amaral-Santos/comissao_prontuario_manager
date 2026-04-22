@@ -327,7 +327,7 @@ with tab2:
         rasura = st.number_input("Rasura: ", value=0, key="rasura_input")
         
         
-        atualizar_pts = st.number_input("Atualzar PTS: ", value=0, key="atualizar_pts_input")
+        atualizar_pts = st.number_input("Atualizar PTS: ", value=0, key="atualizar_pts_input")
         
         total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
 
