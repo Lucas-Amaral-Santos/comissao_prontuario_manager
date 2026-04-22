@@ -325,7 +325,9 @@ with tab2:
         qu_horario = st.number_input("Quadro de Horário: ", value=0, key="qu_horario_input")
 
         rasura = st.number_input("Rasura: ", value=0, key="rasura_input")
-
+        
+        
+        atualizar_pts = st.number_input("Atualzar PTS: ", value=0, key="atualzar_pts_input")
         
         total_ocorrencias = evolucao + at_diaria + qu_horario + anex_aval_evol_entrada + carimbar_assinar + preenche_campos + rasura + evol_alta + datar + folha_enc + dados_errados + info_cid + ordem_cron + abrir_pront
 
@@ -367,13 +369,14 @@ with tab2:
                     info_cid,
                     ordem_cron,
                     abrir_pront,
-                    data,
+                    atualizar_pts,
+                    data,                    
                     revisao_id
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, LAST_INSERT_ID())
+                VALUES (%s, %s,  %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, LAST_INSERT_ID())
                 """
             
-            val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, data)
+            val = (evolucao, at_diaria, qu_horario, anex_aval_evol_entrada, carimbar_assinar, preenche_campos, rasura, evol_alta, datar, folha_enc, dados_errados, info_cid, ordem_cron, abrir_pront, atualizar_pts, data)
             
             mycursor.execute(sql, val)
 
@@ -442,7 +445,7 @@ with tab3:
 
     # editor com checkbox
     
-    df_rev_mes = df_rev_mes[["Selecionar", "data", "prontuario", "setor", "turno", "profissional", "atualizado_em", "evolucao", "at_diaria", "qu_horario", "anex_aval_evol_entrada", "carimbar_assinar", "preenche_campos", "rasura", "evol_alta", "datar", "folha_enc", "dados_errados", "info_cid", "ordem_cron", "abrir_pront", "revisao_id"]]
+    df_rev_mes = df_rev_mes[["Selecionar", "data", "prontuario", "setor", "turno", "profissional", "atualizado_em", "evolucao", "at_diaria", "qu_horario", "anex_aval_evol_entrada", "carimbar_assinar", "preenche_campos", "rasura", "evol_alta", "datar", "folha_enc", "dados_errados", "info_cid", "ordem_cron", "abrir_pront", "atualizar_pts", "revisao_id"]]
     
     edited_df = st.data_editor(
         df_rev_mes,
