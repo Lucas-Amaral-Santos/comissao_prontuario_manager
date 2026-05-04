@@ -270,7 +270,7 @@ with tab2:
     if not revisar_input:
         corretos = st.number_input("Prontuários corretos: ", value=0, key="corretos_input")
     else:
-        prontuario = st.number_input("Prontuário: ", value=0, key="prontuario_input")
+        prontuario = st.text_input("Prontuário: ", key="prontuario_input")
 
 
         setor_choices = [
